@@ -178,6 +178,12 @@ EXERCISE_IMAGES = {
     "Bird Dog":              "https://spotebi.com/wp-content/uploads/2014/10/bird-dogs-exercise-illustration.jpg",
     "Bridge Exercise":       "https://spotebi.com/wp-content/uploads/2015/01/glute-bridge-exercise-illustration.jpg",
     "Side Planks":           "https://weighttraining.guide/wp-content/uploads/2023/03/High-one-leg-side-plank.png",
+    "HIIT Circuit (Low Impact)": "https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=600",
+    "Child's Pose Stretch":  "https://liftmanual.com/wp-content/uploads/2023/04/child-pose.jpg",
+    "Yoga for Flexibility":  "https://cdn.prod.website-files.com/683b218dcc58f93d54ce8e1d/6878c7705050c11c0c1fa901_flexibility.webp",
+    "Low Impact HIIT":       "https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=600",
+    "Cat-Cow Stretch":       "https://liftmanual.com/wp-content/uploads/2023/04/cat-cow-stretch.webp",
+    "Yoga for Core":         "https://cdn.vectorstock.com/i/1000v/40/23/9-core-strength-yoga-poses-vector-32144023.jpg",
 }
 
 # Reference pages for each exercise (from user-provided links)
@@ -209,6 +215,12 @@ EXERCISE_REFS = {
     "Bird Dog":              "https://spotebi.com/exercise-guide/bird-dogs/",
     "Bridge Exercise":       "https://spotebi.com/exercise-guide/glute-bridge/",
     "Side Planks":           "https://weighttraining.guide/exercises/high-one-leg-side-plank/",
+    "HIIT Circuit (Low Impact)": "https://www.pinterest.com/pin/503206958368195189/",
+    "Child's Pose Stretch":  "https://liftmanual.com/child-pose/",
+    "Yoga for Flexibility":  "https://myyogateacher.com/articles/yoga-for-flexibility-poses",
+    "Low Impact HIIT":       "https://www.pinterest.com/pin/503206958368195189/",
+    "Cat-Cow Stretch":       "https://liftmanual.com/cat-cow-stretch/",
+    "Yoga for Core":         "https://www.vectorstock.com/royalty-free-vector/9-core-strength-yoga-poses-vector-32144023",
 }
 
 
