@@ -182,7 +182,7 @@ EXERCISE_IMAGES = {
     "Child's Pose Stretch":  "https://liftmanual.com/wp-content/uploads/2023/04/child-pose.jpg",
     "Yoga for Flexibility":  "https://cdn.prod.website-files.com/683b218dcc58f93d54ce8e1d/6878c7705050c11c0c1fa901_flexibility.webp",
     "Low Impact HIIT":       "https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=600",
-    "Cat-Cow Stretch":       "https://spotebi.com/wp-content/uploads/2015/11/cat-pose-marjaryasana.jpg",
+    "Cat-Cow Stretch":       "https://liftmanual.com/wp-content/uploads/2023/04/cat-cow-stretch.jpg",
     "Yoga for Core":         "https://www.puregym.com/media/uzxcaxub/yoga-for-core-strength-2x3.jpg?quality=80",
 }
 
