@@ -178,10 +178,10 @@ EXERCISE_IMAGES = {
     "Bird Dog":              "https://spotebi.com/wp-content/uploads/2014/10/bird-dogs-exercise-illustration.jpg",
     "Bridge Exercise":       "https://spotebi.com/wp-content/uploads/2015/01/glute-bridge-exercise-illustration.jpg",
     "Side Planks":           "https://weighttraining.guide/wp-content/uploads/2023/03/High-one-leg-side-plank.png",
-    "HIIT Circuit (Low Impact)": "https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=600",
+    "HIIT Circuit (Low Impact)": "https://www.puregym.com/media/ppjdvy3h/the-best-hiit-workout-for-building-muscle-2.jpg?quality=80",
     "Child's Pose Stretch":  "https://liftmanual.com/wp-content/uploads/2023/04/child-pose.jpg",
     "Yoga for Flexibility":  "https://cdn.prod.website-files.com/683b218dcc58f93d54ce8e1d/6878c7705050c11c0c1fa901_flexibility.webp",
-    "Low Impact HIIT":       "https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=600",
+    "Low Impact HIIT":       "https://www.puregym.com/media/ppjdvy3h/the-best-hiit-workout-for-building-muscle-2.jpg?quality=80",
     "Cat-Cow Stretch":       "https://liftmanual.com/wp-content/uploads/2023/04/cat-cow-stretch.jpg",
     "Yoga for Core":         "https://www.puregym.com/media/uzxcaxub/yoga-for-core-strength-2x3.jpg?quality=80",
 }
