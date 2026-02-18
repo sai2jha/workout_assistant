@@ -183,7 +183,7 @@ EXERCISE_IMAGES = {
     "Yoga for Flexibility":  "https://cdn.prod.website-files.com/683b218dcc58f93d54ce8e1d/6878c7705050c11c0c1fa901_flexibility.webp",
     "Low Impact HIIT":       "https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=600",
     "Cat-Cow Stretch":       "https://spotebi.com/wp-content/uploads/2015/11/cat-pose-marjaryasana.jpg",
-    "Yoga for Core":         "https://spotebi.com/wp-content/uploads/2016/06/boat-pose-paripurna-navasana-spotebi.jpg",
+    "Yoga for Core":         "https://www.puregym.com/media/uzxcaxub/yoga-for-core-strength-2x3.jpg?quality=80",
 }
 
 # Reference pages for each exercise (from user-provided links)
@@ -220,7 +220,7 @@ EXERCISE_REFS = {
     "Yoga for Flexibility":  "https://myyogateacher.com/articles/yoga-for-flexibility-poses",
     "Low Impact HIIT":       "https://www.pinterest.com/pin/503206958368195189/",
     "Cat-Cow Stretch":       "https://liftmanual.com/cat-cow-stretch/",
-    "Yoga for Core":         "https://www.vectorstock.com/royalty-free-vector/9-core-strength-yoga-poses-vector-32144023",
+    "Yoga for Core":         "https://www.puregym.com/blog/yoga-for-core-strength-building-a-strong-foundation/",
 }
 
 
