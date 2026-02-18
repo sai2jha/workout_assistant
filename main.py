@@ -182,8 +182,8 @@ EXERCISE_IMAGES = {
     "Child's Pose Stretch":  "https://liftmanual.com/wp-content/uploads/2023/04/child-pose.jpg",
     "Yoga for Flexibility":  "https://cdn.prod.website-files.com/683b218dcc58f93d54ce8e1d/6878c7705050c11c0c1fa901_flexibility.webp",
     "Low Impact HIIT":       "https://images.unsplash.com/photo-1534258936925-c58bed479fcb?w=600",
-    "Cat-Cow Stretch":       "https://liftmanual.com/wp-content/uploads/2023/04/cat-cow-stretch.webp",
-    "Yoga for Core":         "https://cdn.vectorstock.com/i/1000v/40/23/9-core-strength-yoga-poses-vector-32144023.jpg",
+    "Cat-Cow Stretch":       "https://spotebi.com/wp-content/uploads/2015/11/cat-pose-marjaryasana.jpg",
+    "Yoga for Core":         "https://spotebi.com/wp-content/uploads/2016/06/boat-pose-paripurna-navasana-spotebi.jpg",
 }
 
 # Reference pages for each exercise (from user-provided links)
