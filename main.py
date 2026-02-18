@@ -143,6 +143,43 @@ def load_exercise_pool():
 
 
 # =============================================================================
+# EXERCISE IMAGES — sourced from user-provided URLs
+# =============================================================================
+
+EXERCISE_IMAGES = {
+    # Data.txt exercises
+    "Dumbbell Curl":        "https://weighttraining.guide/wp-content/uploads/2016/05/Dumbbell-Alternate-Biceps-Curl-resized.png",
+    "Incline Dumbbell Curl":"https://weighttraining.guide/wp-content/uploads/2017/01/Incline-Dumbbell-Curl-resized.png",
+    "Hammer Curl":          "https://weighttraining.guide/wp-content/uploads/2016/11/Dumbbell-Hammer-Curl-resized.png",
+    "Barbell Bench Press":  "https://weighttraining.guide/wp-content/uploads/2016/05/Barbell-Bench-Press-resized.png",
+    "Incline Dumbbell Press":"https://weighttraining.guide/wp-content/uploads/2016/11/incline-dumbbell-bench-press-resized.png",
+    "Cable Flyes":          "https://weighttraining.guide/wp-content/uploads/2016/05/cable-cross-over-resized.png",
+    "Dips":                 "https://training.fit/wp-content/uploads/2020/03/arnold-dips-800x448.png",
+    "Barbell Back Squat":   "https://weighttraining.guide/wp-content/uploads/2016/10/barbell-squat-resized-FIXED-2.png",
+    "Leg Press":            "https://training.fit/wp-content/uploads/2020/03/beinpresse-800x448.png",
+    "Leg Curl":             "https://training.fit/wp-content/uploads/2020/03/beinbeugen-liegend-geraet.png",
+    "Leg Extension":        "https://weighttraining.guide/wp-content/uploads/2016/05/lever-leg-extension-resized.png",
+    "Calf Raises":          "https://cdn.athlemove.com/bbdba77e-b34b-4683-bdcb-ffce756d42b8.webp",
+}
+
+# Reference pages for each exercise (from user-provided links)
+EXERCISE_REFS = {
+    "Dumbbell Curl":        "https://fitnessvolt.com/dumbbell-curl-biceps/",
+    "Incline Dumbbell Curl":"https://weighttraining.guide/exercises/incline-dumbbell-curl/",
+    "Hammer Curl":          "https://weighttraining.guide/exercises/dumbbell-hammer-curl/",
+    "Barbell Bench Press":  "https://weighttraining.guide/exercises/bench-press/",
+    "Incline Dumbbell Press":"https://weighttraining.guide/exercises/incline-dumbbell-bench-press/",
+    "Cable Flyes":          "https://weighttraining.guide/exercises/cable-cross-over/",
+    "Dips":                 "https://training.fit/exercise/bench-dip/",
+    "Barbell Back Squat":   "https://weighttraining.guide/exercises/barbell-squat/",
+    "Leg Press":            "https://training.fit/exercise/seated-leg-press/",
+    "Leg Curl":             "https://training.fit/exercise/lying-leg-curl/",
+    "Leg Extension":        "https://fitnessvolt.com/leg-extension/",
+    "Calf Raises":          "https://athlemove.com/exercises/dumbbell-standing-calf-raise",
+}
+
+
+# =============================================================================
 # RECOMMENDATION ENGINE — scores every dataset exercise for the user
 # =============================================================================
 
@@ -345,9 +382,32 @@ display_df = display_df.reset_index(drop=True)
 
 st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-st.subheader("Sets per Exercise")
-chart_df = display_df.set_index("Exercise")[["Sets"]]
-st.bar_chart(chart_df)
+# Show exercise images with correct form
+st.subheader("Exercise Guide — Correct Form")
+
+exercise_names = display_df["Exercise"].tolist()
+for ex_name in exercise_names:
+    img_url = EXERCISE_IMAGES.get(ex_name)
+    ref_url = EXERCISE_REFS.get(ex_name)
+
+    if img_url:
+        col_img, col_info = st.columns([1, 1])
+        col_img.image(img_url, use_container_width=True)
+        # Get exercise details from the display table
+        ex_row = display_df[display_df["Exercise"] == ex_name].iloc[0]
+        col_info.markdown(f"### {ex_name}")
+        col_info.write(f"**Sets:** {ex_row['Sets']}  |  **Reps:** {ex_row['Reps']}  |  **Rest:** {ex_row['Rest (sec)']}s")
+        col_info.write(f"**Difficulty:** {ex_row['Difficulty']}  |  **Equipment:** {ex_row['Equipment']}")
+        if ref_url:
+            col_info.markdown(f"[View full exercise guide]({ref_url})")
+        st.divider()
+    else:
+        st.markdown(f"### {ex_name}")
+        ex_row = display_df[display_df["Exercise"] == ex_name].iloc[0]
+        st.write(f"**Sets:** {ex_row['Sets']}  |  **Reps:** {ex_row['Reps']}  |  **Rest:** {ex_row['Rest (sec)']}s")
+        st.write(f"**Difficulty:** {ex_row['Difficulty']}  |  **Equipment:** {ex_row['Equipment']}")
+        st.caption("Image not yet available for this exercise.")
+        st.divider()
 
 # Show which dataset plans were used
 st.caption(
