@@ -393,8 +393,6 @@ if search_query:
             st.caption("Image not yet available for this exercise.")
             st.divider()
 
-st.divider()
-
 # ---- WORKOUT PREFERENCES ----
 st.header("Workout Preferences")
 
