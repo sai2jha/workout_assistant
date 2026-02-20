@@ -70,6 +70,20 @@ def load_muscle_relationships():
     return {k: sorted(v) for k, v in relationships.items()}
 
 
+@st.cache_data
+def load_exercise_muscle_map():
+    """
+    Build a mapping of exercise name -> all muscle groups it trains,
+    from workout_creator_dataset.json.
+    e.g. {"Barbell Bench Press": ["Chest", "Triceps", "Shoulders"], ...}
+    """
+    json_path = Path(__file__).parent / "Data" / "workout_creator_dataset.json"
+    with open(json_path) as f:
+        data = json.load(f)
+
+    return {ex["name"]: ex["muscleGroups"] for ex in data["exercises"]}
+
+
 # =============================================================================
 # SEMANTIC SEARCH — embeddings + cosine similarity
 # =============================================================================
@@ -99,43 +113,45 @@ def compute_exercise_embeddings(_model, descriptions):
     return _model.encode(descriptions)
 
 
-def semantic_search(query, pool_df, model, embeddings, related_map, n=5):
+def semantic_search(query, pool_df, model, embeddings, ex_muscle_map, n=5):
     """Return top-n exercises most similar to the user's natural language query.
-    Uses muscle relationships from workout_creator_dataset.json to filter results."""
+    Uses exercise-muscle map from workout_creator_dataset.json to find exercises
+    that train the searched muscle group (primary or secondary)."""
     query_embedding = model.encode([query])
     similarities = cosine_similarity(query_embedding, embeddings)[0]
     pool_df = pool_df.copy()
     pool_df["_similarity"] = similarities
 
-    # Map common search terms to muscle group names
-    # (needed because users type "tricep" not "Triceps")
-    keyword_to_muscle = {
-        "bicep": "Biceps",
-        "tricep": "Triceps",
-        "shoulder": "Shoulders",
-        "chest": "Chest",
-        "back": "Back",
-        "leg": "Legs",
-        "hamstring": "Legs",
-        "quad": "Legs",
-        "glute": "Legs",
-        "calf": "Legs",
-        "calves": "Legs",
-        "ab": "Abs",
-        "core": "Abs",
-    }
+    # Build keyword mapping dynamically from all muscle group names
+    # in both the exercise pool and the dataset JSON
+    all_muscles = set(pool_df["Muscle"].unique())
+    for muscles in ex_muscle_map.values():
+        all_muscles.update(muscles)
 
-    # Detect muscle keyword in query
+    # Detect muscle group in query by checking if any muscle name
+    # appears in the query (case-insensitive, partial match)
     query_lower = query.lower()
     detected_muscle = None
-    for keyword, muscle_name in keyword_to_muscle.items():
-        if keyword in query_lower:
-            detected_muscle = muscle_name
+    for muscle in sorted(all_muscles, key=len, reverse=True):
+        # Check for the muscle name or its singular form (e.g. "bicep" matches "Biceps")
+        muscle_lower = muscle.lower()
+        singular = muscle_lower.rstrip("s")
+        if muscle_lower in query_lower or singular in query_lower:
+            detected_muscle = muscle
             break
 
     if detected_muscle:
-        # Only show exercises for the exact muscle group searched
-        filtered = pool_df[pool_df["Muscle"] == detected_muscle]
+        # Find exercises that train this muscle:
+        # 1. Primary muscle column matches
+        # 2. OR the exercise trains this muscle according to the dataset JSON
+        exercises_training_muscle = {
+            name for name, muscles in ex_muscle_map.items()
+            if detected_muscle in muscles
+        }
+        filtered = pool_df[
+            (pool_df["Muscle"] == detected_muscle) |
+            (pool_df["Name"].isin(exercises_training_muscle))
+        ]
         results = (
             filtered
             .sort_values("_similarity", ascending=False)
@@ -238,6 +254,7 @@ embedding_model = load_embedding_model()
 exercise_descriptions = build_exercise_descriptions(exercise_pool)
 exercise_embeddings = compute_exercise_embeddings(embedding_model, exercise_descriptions)
 muscle_relationships = load_muscle_relationships()
+exercise_muscle_map = load_exercise_muscle_map()
 
 
 # =============================================================================
@@ -340,7 +357,7 @@ search_query = st.text_input(
 
 if search_query:
     search_results = semantic_search(
-        search_query, exercise_pool, embedding_model, exercise_embeddings, muscle_relationships, n=5
+        search_query, exercise_pool, embedding_model, exercise_embeddings, exercise_muscle_map, n=5
     )
 
     st.subheader("Search Results")
