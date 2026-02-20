@@ -1,0 +1,334 @@
+﻿“””
+RapidAPI Workout Planner Dataset
+Extracted from: Workout Planner API by nabeel-dev1340
+API Endpoint: https://rapidapi.com/nabeeldev1340/api/workout-planner1
+Last Updated: 2026-02-17
+“””
+
+
+Import json
+Import requests
+
+
+# API Configuration
+API_HOST = “workout-planner1.p.rapidapi.com”
+API_KEY = “YOUR_RAPIDAPI_KEY_HERE”  # Replace with your RapidAPI key
+
+
+# Workout Planner API Parameters Reference
+WORKOUT_PARAMETERS = {
+    “Time”: {
+        “Description”: “Session duration in minutes”,
+        “Type”: “integer”,
+        “Default”: 30,
+        “Examples”: [15, 30, 45, 60, 90]
+    },
+    “Equipment”: {
+        “Description”: “Available equipment (comma-separated for multiple)”,
+        “Type”: “string”,
+        “Examples”: [
+            “Dumbbells”,
+            “Barbell”,
+            “Kettlebell”,
+            “Cable machine”,
+            “Resistance bands”,
+            “Bodyweight”,
+            “Medicine ball”,
+            “Foam roller”
+        ]
+    },
+    “Muscle”: {
+        “Description”: “Target muscle group(s) (comma-separated for multiple)”,
+        “Type”: “string”,
+        “Examples”: [
+            “Biceps”,
+            “Triceps”,
+            “Chest”,
+            “Back”,
+            “Shoulders”,
+            “Legs”,
+            “Quadriceps”,
+            “Hamstrings”,
+            “Glutes”,
+            “Abs”,
+            “Forearms”
+        ]
+    },
+    “Fitness_level”: {
+        “Description”: “User fitness level”,
+        “Type”: “string”,
+        “Options”: [“beginner”, “intermediate”, “advanced”, “expert”],
+        “Default”: “beginner”
+    },
+    “Fitness_goals”: {
+        “Description”: “Primary fitness objective (comma-separated for multiple)”,
+        “Type”: “string”,
+        “Examples”: [
+            “Strength”,
+            “Endurance”,
+            “Muscle gain”,
+            “Weight loss”,
+            “Flexibility”,
+            “Power”,
+            “Conditioning”,
+            “Rehabilitation”
+        ]
+    }
+}
+
+
+# Sample Workout Data Structure
+SAMPLE_WORKOUT_RESPONSES = {
+    “Beginner_strength”: {
+        “Duration”: 30,
+        “Target_muscle”: “biceps”,
+        “Fitness_level”: “beginner”,
+        “Goal”: “strength”,
+        “Exercises”: [
+            {
+                “Name”: “Dumbbell Curl”,
+                “Sets”: 3,
+                “Reps”: 12,
+                “Rest_seconds”: 60,
+                “Difficulty”: “easy”,
+                “Equipment”: “dumbbells”
+            },
+            {
+                “Name”: “Incline Dumbbell Curl”,
+                “Sets”: 3,
+                “Reps”: 10,
+                “Rest_seconds”: 90,
+                “Difficulty”: “medium”,
+                “Equipment”: “dumbbells”
+            },
+            {
+                “Name”: “Hammer Curl”,
+                “Sets”: 3,
+                “Reps”: 12,
+                “Rest_seconds”: 60,
+                “Difficulty”: “easy”,
+                “Equipment”: “dumbbells”
+            }
+        ]
+    },
+    
+    “Intermediate_muscle_gain”: {
+        “Duration”: 45,
+        “Target_muscle”: “chest”,
+        “Fitness_level”: “intermediate”,
+        “Goal”: “muscle gain”,
+        “Exercises”: [
+            {
+                “Name”: “Barbell Bench Press”,
+                “Sets”: 4,
+                “Reps”: 8,
+                “Rest_seconds”: 120,
+                “Difficulty”: “hard”,
+                “Equipment”: “barbell”
+            },
+            {
+                “Name”: “Incline Dumbbell Press”,
+                “Sets”: 4,
+                “Reps”: 10,
+                “Rest_seconds”: 90,
+                “Difficulty”: “medium”,
+                “Equipment”: “dumbbells”
+            },
+            {
+                “Name”: “Cable Flyes”,
+                “Sets”: 3,
+                “Reps”: 12,
+                “Rest_seconds”: 60,
+                “Difficulty”: “medium”,
+                “Equipment”: “cable machine”
+            },
+            {
+                “Name”: “Dips”,
+                “Sets”: 3,
+                “Reps”: 10,
+                “Rest_seconds”: 90,
+                “Difficulty”: “medium”,
+                “Equipment”: “bodyweight”
+            }
+        ]
+    },
+    
+    “Advanced_endurance”: {
+        “Duration”: 60,
+        “Target_muscle”: “legs”,
+        “Fitness_level”: “advanced”,
+        “Goal”: “endurance”,
+        “Exercises”: [
+            {
+                “Name”: “Barbell Back Squat”,
+                “Sets”: 5,
+                “Reps”: 5,
+                “Rest_seconds”: 180,
+                “Difficulty”: “hard”,
+                “Equipment”: “barbell”
+            },
+            {
+                “Name”: “Leg Press”,
+                “Sets”: 4,
+                “Reps”: 15,
+                “Rest_seconds”: 90,
+                “Difficulty”: “medium”,
+                “Equipment”: “cable machine”
+            },
+            {
+                “Name”: “Leg Curl”,
+                “Sets”: 4,
+                “Reps”: 12,
+                “Rest_seconds”: 60,
+                “Difficulty”: “medium”,
+                “Equipment”: “cable machine”
+            },
+            {
+                “Name”: “Leg Extension”,
+                “Sets”: 3,
+                “Reps”: 15,
+                “Rest_seconds”: 60,
+                “Difficulty”: “easy”,
+                “Equipment”: “cable machine”
+            },
+            {
+                “Name”: “Calf Raises”,
+                “Sets”: 3,
+                “Reps”: 20,
+                “Rest_seconds”: 45,
+                “Difficulty”: “easy”,
+                “Equipment”: “barbell”
+            }
+        ]
+    }
+}
+
+
+# Client Profile Templates
+CLIENT_PROFILES = {
+    “Client_1”: {
+        “Name”: “John Doe”,
+        “Age”: 28,
+        “Weight_kg”: 82,
+        “Height_cm”: 180,
+        “Fitness_level”: “beginner”,
+        “Goals”: [“muscle gain”, “strength”],
+        “Available_equipment”: [“dumbbells”, “barbell”],
+        “Session_duration”: 45,
+        “Target_muscles”: [“chest”, “back”]
+    },
+    “Client_2”: {
+        “Name”: “Sarah Johnson”,
+        “Age”: 35,
+        “Weight_kg”: 65,
+        “Height_cm”: 168,
+        “Fitness_level”: “intermediate”,
+        “Goals”: [“weight loss”, “endurance”],
+        “Available_equipment”: [“dumbbells”, “cable machine”, “resistance bands”],
+        “Session_duration”: 60,
+        “Target_muscles”: [“legs”, “glutes”]
+    },
+    “Client_3”: {
+        “Name”: “Mike Thompson”,
+        “Age”: 42,
+        “Weight_kg”: 95,
+        “Height_cm”: 185,
+        “Fitness_level”: “advanced”,
+        “Goals”: [“strength”, “power”],
+        “Available_equipment”: [“barbell”, “dumbbells”, “kettlebell”],
+        “Session_duration”: 90,
+        “Target_muscles”: [“full body”]
+    }
+}
+
+
+Class WorkoutPlannerAPI:
+    “””Class to interact with the Workout Planner API”””
+    
+    Def __init__(self, api_key):
+        Self.api_key = api_key
+        Self.host = API_HOST
+        Self.base_url = f”https://{self.host}”
+        
+    Def get_workout_plan(self, time, equipment, muscle, fitness_level, fitness_goals):
+        “””
+        Fetch a personalized workout plan
+        
+        Args:
+            Time (int): Session duration in minutes
+            Equipment (str): Available equipment
+            Muscle (str): Target muscle group(s)
+            Fitness_level (str): Fitness level (beginner/intermediate/advanced)
+            Fitness_goals (str): Fitness goals
+            
+        Returns:
+            Dict: Workout plan data
+        “””
+        Headers = {
+            “X-rapidapi-key”: self.api_key,
+            “X-rapidapi-host”: self.host
+        }
+        
+        Params = {
+            “Time”: time,
+            “Equipment”: equipment,
+            “Muscle”: muscle,
+            “Fitness_level”: fitness_level,
+            “Fitness_goals”: fitness_goals
+        }
+        
+        Try:
+            Response = requests.get(
+                f”{self.base_url}/customized”,
+                params=params,
+                headers=headers
+            )
+            
+            If response.status_code == 200:
+                Return response.json()
+            Else:
+                print(f”Error: {response.status_code}”)
+                Return None
+                
+        Except Exception as e:
+            print(f”Request failed: {str(e)}”)
+            Return None
+
+
+# Example Usage
+If __name__ == “__main__”:
+    # Initialize API client
+    Api_client = WorkoutPlannerAPI(API_KEY)
+    
+    # Example 1: Get beginner bicep workout
+    print(“=== Example 1: Beginner Bicep Workout ===”)
+    Workout_1 = api_client.get_workout_plan(
+        time=30,
+        equipment=”dumbbells”,
+        muscle=”biceps”,
+        fitness_level=”beginner”,
+        fitness_goals=”strength”
+    )
+    print(json.dumps(workout_1, indent=2))
+    
+    # Example 2: Get intermediate chest workout
+    print(“\n=== Example 2: Intermediate Chest Workout ===”)
+    Workout_2 = api_client.get_workout_plan(
+        time=45,
+        equipment=”dumbbells,barbell”,
+        muscle=”chest”,
+        fitness_level=”intermediate”,
+        fitness_goals=”muscle gain”
+    )
+    print(json.dumps(workout_2, indent=2))
+    
+    # Example 3: Get advanced leg workout
+    print(“\n=== Example 3: Advanced Leg Workout ===”)
+    Workout_3 = api_client.get_workout_plan(
+        time=60,
+        equipment=”barbell,cable machine”,
+        muscle=”legs”,
+        fitness_level=”advanced”,
+        fitness_goals=”strength,endurance”
+    )
+    print(json.dumps(workout_3, indent=2))

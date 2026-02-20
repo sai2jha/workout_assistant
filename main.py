@@ -299,7 +299,7 @@ def recommend_goal(bmi_cat):
 MUSCLE_GROUPS = ["Biceps", "Triceps", "Shoulders", "Chest", "Back", "Legs", "Abs"]
 FITNESS_GOALS = [
     "Strength", "Endurance", "Muscle gain", "Weight loss",
-    "Flexibility", "Power", "Conditioning", "Rehabilitation",
+    "Flexibility", "Power",
 ]
 FITNESS_LEVELS = ["Beginner", "Intermediate", "Advanced"]
 

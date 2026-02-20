@@ -1,0 +1,114 @@
+{
+  "name": "Intermediate Push Workout",
+  "description": "This workout focuses on chest, triceps, and shoulders using various exercises to build strength and muscle definition.",
+  "exercises": [
+    {
+      "name": "Barbell Bench Press",
+      "description": "A classic chest exercise that also engages the triceps and shoulders.",
+      "instructions": [
+        "Lie on a flat bench with your feet flat on the floor.",
+        "Grip the barbell slightly wider than shoulder-width apart and lower it to your chest.",
+        "Push the barbell back up to the starting position."
+      ],
+      "muscleGroups": [
+        "Chest",
+        "Triceps",
+        "Shoulders"
+      ],
+      "equipment": [
+        "Barbell"
+      ],
+      "sets": 4,
+      "reps": 8
+    },
+    {
+      "name": "Dumbbell Shoulder Press",
+      "description": "Targets the shoulders while also engaging the triceps.",
+      "instructions": [
+        "Sit on a bench with back support, holding a dumbbell in each hand at shoulder height.",
+        "Press the dumbbells directly above your head until your arms are extended.",
+        "Lower the dumbbells back to shoulder height."
+      ],
+      "muscleGroups": [
+        "Shoulders",
+        "Triceps"
+      ],
+      "equipment": [
+        "Dumbbells"
+      ],
+      "sets": 3,
+      "reps": 10
+    },
+    {
+      "name": "Tricep Dips",
+      "description": "An effective bodyweight exercise to target the triceps.",
+      "instructions": [
+        "Using parallel bars, support your body with arms extended and feet off the ground.",
+        "Lower your body by bending your elbows until they are at a 90-degree angle.",
+        "Push yourself back up to the starting position."
+      ],
+      "muscleGroups": [
+        "Triceps"
+      ],
+      "equipment": [
+        "Parallel Bars"
+      ],
+      "sets": 3,
+      "reps": 12
+    },
+    {
+      "name": "Incline Dumbbell Flyes",
+      "description": "Focuses on the chest muscles with an incline angle.",
+      "instructions": [
+        "Lie on an incline bench holding dumbbells above your chest with slightly bent arms.",
+        "Lower the dumbbells out to the sides in a wide arc.",
+        "Bring the dumbbells back up above your chest."
+      ],
+      "muscleGroups": [
+        "Chest"
+      ],
+      "equipment": [
+        "Dumbbells",
+        "Incline Bench"
+      ],
+      "sets": 3,
+      "reps": 12
+    },
+    {
+      "name": "Side Lateral Raises",
+      "description": "Isolates the side deltoids to enhance shoulder definition.",
+      "instructions": [
+        "Stand with dumbbells by your sides, palms facing in.",
+        "Raise the dumbbells to the sides with a slight bend in your elbows until shoulder height.",
+        "Lower the dumbbells back down slowly."
+      ],
+      "muscleGroups": [
+        "Shoulders"
+      ],
+      "equipment": [
+        "Dumbbells"
+      ],
+      "sets": 3,
+      "reps": 12
+    },
+    {
+      "name": "Push-Ups",
+      "description": "A bodyweight exercise that engages the chest, triceps, and shoulders.",
+      "instructions": [
+        "Start in a plank position with hands slightly wider than shoulder-width apart.",
+        "Lower your body by bending your elbows until your chest touches the ground.",
+        "Push yourself back up to the starting position."
+      ],
+      "muscleGroups": [
+        "Chest",
+        "Triceps",
+        "Shoulders"
+      ],
+      "equipment": [
+        "None"
+      ],
+      "sets": 3,
+      "reps": 15
+    }
+  ]
+}
