@@ -129,10 +129,8 @@ def semantic_search(query, pool_df, model, embeddings, related_map, n=5):
             break
 
     if detected_muscle:
-        # Use dataset relationships to get related muscles
-        related = related_map.get(detected_muscle, [])
-        allowed_muscles = [detected_muscle] + related
-        filtered = pool_df[pool_df["Muscle"].isin(allowed_muscles)]
+        # Only show exercises for the exact muscle group searched
+        filtered = pool_df[pool_df["Muscle"] == detected_muscle]
         results = (
             filtered
             .sort_values("_similarity", ascending=False)
