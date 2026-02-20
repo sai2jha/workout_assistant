@@ -34,6 +34,6 @@ Low Impact HIIT,1,1,0,Medium,Bodyweight,Beginner,Weight loss,Legs,API-Fitness,ht
 Cat-Cow Stretch,1,1,0,Easy,Bodyweight,Beginner,Weight loss,Legs,API-Fitness,https://liftmanual.com/wp-content/uploads/2023/04/cat-cow-stretch.jpg,https://liftmanual.com/cat-cow-stretch/
 Yoga for Core,1,1,0,Easy,Bodyweight,Beginner,Weight loss,Abs,API-Fitness,https://www.puregym.com/media/uzxcaxub/yoga-for-core-strength-2x3.jpg?quality=80,https://www.puregym.com/blog/yoga-for-core-strength-building-a-strong-foundation/
 Side Planks,2,2,30,Medium,Bodyweight,Beginner,Weight loss,Abs,API-Fitness,https://weighttraining.guide/wp-content/uploads/2023/03/High-one-leg-side-plank.png,https://weighttraining.guide/exercises/high-one-leg-side-plank/
-Tricep Dips,3,12,60,Medium,Parallel Bars,Intermediate,Strength,Triceps,workout_creator_dataset,,
-Incline Dumbbell Flyes,3,12,60,Medium,Dumbbells,Intermediate,Strength,Chest,workout_creator_dataset,,
-Side Lateral Raises,3,12,60,Medium,Dumbbells,Intermediate,Strength,Shoulders,workout_creator_dataset,,
+Tricep Dips,3,12,60,Medium,Parallel Bars,Intermediate,Strength,Triceps,workout_creator_dataset,https://training.fit/wp-content/uploads/2020/03/arnold-dips-800x448.png,https://training.fit/exercise/bench-dip/
+Incline Dumbbell Flyes,3,12,60,Medium,Dumbbells,Intermediate,Strength,Chest,workout_creator_dataset,https://training.fit/wp-content/uploads/2020/02/fliegende-schraegbank-800x448.png,https://training.fit/exercise/incline-dumbbell-fly/
+Side Lateral Raises,3,12,60,Medium,Dumbbells,Intermediate,Strength,Shoulders,workout_creator_dataset,https://training.fit/wp-content/uploads/2020/03/seitenheben-kurzhanteln-800x448.png,https://training.fit/exercise/lateral-raise/

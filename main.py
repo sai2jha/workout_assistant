@@ -293,7 +293,40 @@ st.markdown("Get a **personalised workout plan** based on your body and goals.")
 
 st.divider()
 
-# ---- SEMANTIC SEARCH ----
+# ---- TELL US ABOUT YOURSELF ----
+st.header("Tell Us About Yourself")
+
+input_col, result_col = st.columns(2)
+
+user_name = input_col.text_input("Your name", "")
+
+user_weight = input_col.slider("Weight (kg)", min_value=30, max_value=200, value=70, step=1)
+user_height = input_col.slider("Height (cm)", min_value=120, max_value=220, value=170, step=1)
+
+bmi = calculate_bmi(user_weight, user_height)
+category = bmi_category(bmi)
+css_class = bmi_css_class(category)
+greeting = f"Hi {user_name}!" if user_name else "Hi there!"
+
+result_col.markdown(
+    f"""
+    <div class="bmi-card {css_class}">
+        <h3>{greeting}</h3>
+        <h1>{bmi}</h1>
+        <p style="font-size:1.2rem;"><strong>{category}</strong></p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+result_col.write(f"**Weight:** {user_weight} kg")
+result_col.write(f"**Height:** {user_height} cm")
+
+rec_goal = recommend_goal(category)
+result_col.info(f"Based on your BMI we suggest a focus on **{rec_goal}**.")
+
+st.divider()
+
+# ---- SEARCH FOR EXERCISES ----
 st.header("Search for Exercises")
 st.markdown("Type a **natural language query** to find exercises by meaning, not just keywords.")
 
@@ -342,41 +375,8 @@ if search_query:
 
 st.divider()
 
-# ---- STEP 1 ----
-st.header("Step 1 — Tell us about yourself")
-
-input_col, result_col = st.columns(2)
-
-user_name = input_col.text_input("Your name", "")
-
-user_weight = input_col.slider("Weight (kg)", min_value=30, max_value=200, value=70, step=1)
-user_height = input_col.slider("Height (cm)", min_value=120, max_value=220, value=170, step=1)
-
-bmi = calculate_bmi(user_weight, user_height)
-category = bmi_category(bmi)
-css_class = bmi_css_class(category)
-greeting = f"Hi {user_name}!" if user_name else "Hi there!"
-
-result_col.markdown(
-    f"""
-    <div class="bmi-card {css_class}">
-        <h3>{greeting}</h3>
-        <h1>{bmi}</h1>
-        <p style="font-size:1.2rem;"><strong>{category}</strong></p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-result_col.write(f"**Weight:** {user_weight} kg")
-result_col.write(f"**Height:** {user_height} cm")
-
-rec_goal = recommend_goal(category)
-result_col.info(f"Based on your BMI we suggest a focus on **{rec_goal}**.")
-
-st.divider()
-
-# ---- STEP 2 ----
-st.header("Step 2 — Choose your workout preferences")
+# ---- WORKOUT PREFERENCES ----
+st.header("Workout Preferences")
 
 pref1, pref2, pref3 = st.columns(3)
 
@@ -392,8 +392,8 @@ target_muscle = pref3.selectbox("Which muscle group do you want to target?", MUS
 
 st.divider()
 
-# ---- STEP 3 ----
-st.header("Step 3 — Your Recommended Workout")
+# ---- RECOMMENDED WORKOUT ----
+st.header("Your Recommended Workout")
 
 top_exercises = recommend_exercises(exercise_pool, fitness_level, fitness_goal, target_muscle, muscle_relationships)
 
