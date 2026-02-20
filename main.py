@@ -116,6 +116,11 @@ def semantic_search(query, pool_df, model, embeddings, related_map, n=5):
         "chest": "Chest",
         "back": "Back",
         "leg": "Legs",
+        "hamstring": "Legs",
+        "quad": "Legs",
+        "glute": "Legs",
+        "calf": "Legs",
+        "calves": "Legs",
         "ab": "Abs",
         "core": "Abs",
     }
