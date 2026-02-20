@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import json
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -43,6 +44,31 @@ def load_exercise_pool():
     return pd.read_csv(csv_path)
 
 
+@st.cache_data
+def load_muscle_relationships():
+    """
+    Build muscle group relationships from workout_creator_dataset.json.
+    For each exercise, every muscle in its muscleGroups list is related
+    to every other muscle in that list.
+    Returns a dict: { "Chest": ["Triceps", "Shoulders"], ... }
+    """
+    json_path = Path(__file__).parent / "Data" / "workout_creator_dataset.json"
+    with open(json_path) as f:
+        data = json.load(f)
+
+    relationships = {}
+    for exercise in data["exercises"]:
+        muscles = exercise.get("muscleGroups", [])
+        for muscle in muscles:
+            if muscle not in relationships:
+                relationships[muscle] = set()
+            for other in muscles:
+                if other != muscle:
+                    relationships[muscle].add(other)
+
+    # Convert sets to sorted lists
+    return {k: sorted(v) for k, v in relationships.items()}
+
 
 # =============================================================================
 # SEMANTIC SEARCH — embeddings + cosine similarity
@@ -73,18 +99,54 @@ def compute_exercise_embeddings(_model, descriptions):
     return _model.encode(descriptions)
 
 
-def semantic_search(query, pool_df, model, embeddings, n=5):
-    """Return top-n exercises most similar to the user's natural language query."""
+def semantic_search(query, pool_df, model, embeddings, related_map, n=5):
+    """Return top-n exercises most similar to the user's natural language query.
+    Uses muscle relationships from workout_creator_dataset.json to filter results."""
     query_embedding = model.encode([query])
     similarities = cosine_similarity(query_embedding, embeddings)[0]
     pool_df = pool_df.copy()
     pool_df["_similarity"] = similarities
-    results = (
-        pool_df
-        .sort_values("_similarity", ascending=False)
-        .drop_duplicates(subset="Name", keep="first")
-        .head(n)
-    )
+
+    # Map common search terms to muscle group names
+    # (needed because users type "tricep" not "Triceps")
+    keyword_to_muscle = {
+        "bicep": "Biceps",
+        "tricep": "Triceps",
+        "shoulder": "Shoulders",
+        "chest": "Chest",
+        "back": "Back",
+        "leg": "Legs",
+        "ab": "Abs",
+        "core": "Abs",
+    }
+
+    # Detect muscle keyword in query
+    query_lower = query.lower()
+    detected_muscle = None
+    for keyword, muscle_name in keyword_to_muscle.items():
+        if keyword in query_lower:
+            detected_muscle = muscle_name
+            break
+
+    if detected_muscle:
+        # Use dataset relationships to get related muscles
+        related = related_map.get(detected_muscle, [])
+        allowed_muscles = [detected_muscle] + related
+        filtered = pool_df[pool_df["Muscle"].isin(allowed_muscles)]
+        results = (
+            filtered
+            .sort_values("_similarity", ascending=False)
+            .drop_duplicates(subset="Name", keep="first")
+            .head(n)
+        )
+    else:
+        # No muscle keyword detected — return pure similarity results
+        results = (
+            pool_df
+            .sort_values("_similarity", ascending=False)
+            .drop_duplicates(subset="Name", keep="first")
+            .head(n)
+        )
     return results
 
 
@@ -92,9 +154,10 @@ def semantic_search(query, pool_df, model, embeddings, n=5):
 # RECOMMENDATION ENGINE — scores every dataset exercise for the user
 # =============================================================================
 
-def recommend_exercises(pool_df, user_level, user_goal, user_muscle, n=5):
+def recommend_exercises(pool_df, user_level, user_goal, user_muscle, related_map, n=5):
     """
     Score each exercise in the dataset pool and return the top-n.
+    Uses muscle relationships loaded from workout_creator_dataset.json.
 
     Scoring (higher = better match):
       +3  exact level match
@@ -141,14 +204,22 @@ def recommend_exercises(pool_df, user_level, user_goal, user_muscle, n=5):
     pool_df = pool_df.copy()
     pool_df["_score"] = scores
 
-    # Sort by score descending, then drop duplicates (same exercise name)
-    result = (
-        pool_df
-        .sort_values("_score", ascending=False)
-        .drop_duplicates(subset="Name", keep="first")
-        .head(n)
-    )
+    # First: exact muscle matches
+    exact = pool_df[pool_df["Muscle"].str.lower() == user_muscle.lower()]
+    exact = exact.sort_values("_score", ascending=False).drop_duplicates(subset="Name", keep="first")
 
+    if len(exact) >= n:
+        return exact.head(n)
+
+    # Fill remaining spots with related muscle groups (from dataset)
+    remaining = n - len(exact)
+    related = related_map.get(user_muscle, [])
+    related_df = pool_df[pool_df["Muscle"].isin(related)]
+    related_df = related_df.sort_values("_score", ascending=False).drop_duplicates(subset="Name", keep="first")
+    # Exclude exercises already in exact matches
+    related_df = related_df[~related_df["Name"].isin(exact["Name"])]
+
+    result = pd.concat([exact, related_df.head(remaining)])
     return result
 
 
@@ -157,12 +228,13 @@ def get_duration(level):
 
 
 # =============================================================================
-# Load data + embeddings
+# Load data + embeddings + muscle relationships
 # =============================================================================
 exercise_pool = load_exercise_pool()
 embedding_model = load_embedding_model()
 exercise_descriptions = build_exercise_descriptions(exercise_pool)
 exercise_embeddings = compute_exercise_embeddings(embedding_model, exercise_descriptions)
+muscle_relationships = load_muscle_relationships()
 
 
 # =============================================================================
@@ -232,7 +304,7 @@ search_query = st.text_input(
 
 if search_query:
     search_results = semantic_search(
-        search_query, exercise_pool, embedding_model, exercise_embeddings, n=5
+        search_query, exercise_pool, embedding_model, exercise_embeddings, muscle_relationships, n=5
     )
 
     st.subheader("Search Results")
@@ -323,7 +395,7 @@ st.divider()
 # ---- STEP 3 ----
 st.header("Step 3 — Your Recommended Workout")
 
-top_exercises = recommend_exercises(exercise_pool, fitness_level, fitness_goal, target_muscle)
+top_exercises = recommend_exercises(exercise_pool, fitness_level, fitness_goal, target_muscle, muscle_relationships)
 
 duration = get_duration(fitness_level)
 
