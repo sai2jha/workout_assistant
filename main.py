@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+from exercise_instructions import exercise_instructions
 
 # =============================================================================
 # CUSTOM STYLING
@@ -364,8 +365,7 @@ if search_query:
 
     # Display results table with relevance score
     search_display = search_results[["Name", "Sets", "Reps", "Rest", "Difficulty", "Equipment"]].copy()
-    search_display["Relevance"] = (search_results["_similarity"] * 100).round(1).astype(str) + "%"
-    search_display.columns = ["Exercise", "Sets", "Reps", "Rest (sec)", "Difficulty", "Equipment", "Relevance"]
+    search_display.columns = ["Exercise", "Sets", "Reps", "Rest (sec)", "Difficulty", "Equipment"]
     search_display = search_display.reset_index(drop=True)
 
     st.dataframe(search_display, use_container_width=True, hide_index=True)
@@ -382,15 +382,24 @@ if search_query:
             col_info.markdown(f"### {row['Name']}")
             col_info.write(f"**Sets:** {row['Sets']}  |  **Reps:** {row['Reps']}  |  **Rest:** {row['Rest']}s")
             col_info.write(f"**Difficulty:** {row['Difficulty']}  |  **Equipment:** {row['Equipment']}")
-            col_info.write(f"**Relevance:** {row['_similarity'] * 100:.1f}%")
             if ref_url:
                 col_info.markdown(f"[View full exercise guide]({ref_url})")
+
+            # Display instructions
+            instructions = exercise_instructions.get(row['Name'], "Instructions not available for this exercise.")
+            st.markdown("**How to Perform:**")
+            st.write(instructions)
             st.divider()
         else:
             st.markdown(f"### {row['Name']}")
             st.write(f"**Sets:** {row['Sets']}  |  **Reps:** {row['Reps']}  |  **Rest:** {row['Rest']}s")
             st.write(f"**Difficulty:** {row['Difficulty']}  |  **Equipment:** {row['Equipment']}")
             st.caption("Image not yet available for this exercise.")
+
+            # Display instructions
+            instructions = exercise_instructions.get(row['Name'], "Instructions not available for this exercise.")
+            st.markdown("**How to Perform:**")
+            st.write(instructions)
             st.divider()
 
 # ---- WORKOUT PREFERENCES ----
@@ -452,6 +461,11 @@ for ex_name in exercise_names:
         col_info.write(f"**Difficulty:** {ex_row['Difficulty']}  |  **Equipment:** {ex_row['Equipment']}")
         if ref_url:
             col_info.markdown(f"[View full exercise guide]({ref_url})")
+
+        # Display instructions
+        instructions = exercise_instructions.get(ex_name, "Instructions not available for this exercise.")
+        st.markdown("**How to Perform:**")
+        st.write(instructions)
         st.divider()
     else:
         st.markdown(f"### {ex_name}")
@@ -459,6 +473,11 @@ for ex_name in exercise_names:
         st.write(f"**Sets:** {ex_row['Sets']}  |  **Reps:** {ex_row['Reps']}  |  **Rest:** {ex_row['Rest (sec)']}s")
         st.write(f"**Difficulty:** {ex_row['Difficulty']}  |  **Equipment:** {ex_row['Equipment']}")
         st.caption("Image not yet available for this exercise.")
+
+        # Display instructions
+        instructions = exercise_instructions.get(ex_name, "Instructions not available for this exercise.")
+        st.markdown("**How to Perform:**")
+        st.write(instructions)
         st.divider()
 
 # Show which dataset plans were used
