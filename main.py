@@ -304,6 +304,33 @@ FITNESS_GOALS = [
 ]
 FITNESS_LEVELS = ["Beginner", "Intermediate", "Advanced"]
 
+# Safety blocklist: exercises to exclude per physical limitation
+EXERCISE_BLOCKLIST = {
+    "Pregnant / Postpartum": [
+        "Deadlift", "Barbell Back Squat", "Barbell Squats", "Barbell Squat",
+        "Hack Squat", "Smith Machine Squat", "HIIT Circuit (High Impact)",
+        "Decline Sit-Ups", "Russian Twists", "Bicycle Crunches",
+        "Leg Press", "Bench Press", "Barbell Bench Press",
+    ],
+    "Bad knees": [
+        "Barbell Squats", "Barbell Back Squat", "Barbell Squat", "Dumbbell Squat",
+        "Hack Squat", "Smith Machine Squat", "Walking Lunges",
+        "Leg Extension", "HIIT Circuit (High Impact)", "Low Impact HIIT",
+    ],
+    "Bad back": [
+        "Deadlift", "Barbell Bent-Over Row", "Dumbbell Bent-Over Row",
+        "Bent-Over Rows", "Barbell Back Squat", "Barbell Squats",
+        "Hack Squat", "Decline Sit-Ups", "Russian Twists",
+        "Smith Machine Squat",
+    ],
+    "Shoulder injury": [
+        "Barbell Shoulder Press", "Dumbbell Shoulder Press", "Machine Shoulder Press",
+        "Lateral Raise", "Side Lateral Raises", "Overhead Tricep Extension",
+        "Pull-Ups", "Dips", "Tricep Dips", "Upright Row",
+        "Barbell Bench Press", "Bench Press", "Incline Dumbbell Press",
+    ],
+}
+
 
 # =============================================================================
 # APP LAYOUT
@@ -358,7 +385,7 @@ search_query = st.text_input(
 
 if search_query:
     search_results = semantic_search(
-        search_query, exercise_pool, embedding_model, exercise_embeddings, exercise_muscle_map, n=5
+        search_query, filtered_pool, embedding_model, exercise_embeddings, exercise_muscle_map, n=5
     )
 
     st.subheader("Search Results")
@@ -417,18 +444,49 @@ fitness_goal = pref2.selectbox(
 
 target_muscle = pref3.selectbox("Which muscle group do you want to target?", MUSCLE_GROUPS, index=0)
 
+# Equipment filter
+all_equipment = sorted(exercise_pool["Equipment"].dropna().unique().tolist())
+selected_equipment = st.multiselect(
+    "What equipment do you have available?",
+    options=all_equipment,
+    default=all_equipment,
+)
+
+# Physical limitations
+limitations = st.multiselect(
+    "Do you have any physical limitations?",
+    options=list(EXERCISE_BLOCKLIST.keys()),
+    default=[],
+    placeholder="Select any that apply (optional)",
+)
+
+# Workout duration
+workout_minutes = st.slider("How much time do you have? (minutes)", min_value=15, max_value=90, value=45, step=5)
+
 st.divider()
+
+# Apply filters to exercise pool
+blocked_exercises = set()
+for limitation in limitations:
+    blocked_exercises.update(EXERCISE_BLOCKLIST.get(limitation, []))
+
+filtered_pool = exercise_pool.copy()
+if selected_equipment:
+    filtered_pool = filtered_pool[filtered_pool["Equipment"].isin(selected_equipment)]
+if blocked_exercises:
+    filtered_pool = filtered_pool[~filtered_pool["Name"].isin(blocked_exercises)]
+
+# Calculate max exercises from available time (~4 min per exercise: 3 sets × 40s + 3 × 60s rest)
+max_exercises = max(1, workout_minutes // 4)
 
 # ---- RECOMMENDED WORKOUT ----
 st.header("Your Recommended Workout")
 
-top_exercises = recommend_exercises(exercise_pool, fitness_level, fitness_goal, target_muscle, muscle_relationships)
-
-duration = get_duration(fitness_level)
+top_exercises = recommend_exercises(filtered_pool, fitness_level, fitness_goal, target_muscle, muscle_relationships, n=max_exercises)
 
 # Summary
 c1, c2, c3, c4 = st.columns(4)
-c1.markdown(f"**Duration**<br><span style='font-size:1.6rem;'>{duration} min</span>", unsafe_allow_html=True)
+c1.markdown(f"**Duration**<br><span style='font-size:1.6rem;'>{workout_minutes} min</span>", unsafe_allow_html=True)
 c2.markdown(f"**Level**<br><span style='font-size:1.6rem;'>{fitness_level}</span>", unsafe_allow_html=True)
 c3.markdown(f"**Goal**<br><span style='font-size:1.6rem;'>{fitness_goal}</span>", unsafe_allow_html=True)
 c4.markdown(f"**Target**<br><span style='font-size:1.6rem;'>{target_muscle}</span>", unsafe_allow_html=True)
