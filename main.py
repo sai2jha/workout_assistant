@@ -114,6 +114,21 @@ def compute_exercise_embeddings(_model, descriptions):
     return _model.encode(descriptions)
 
 
+@st.cache_data
+def compute_limitation_embeddings(_model, descriptions):
+    """Compute embeddings for physical limitation descriptions (cached)."""
+    return _model.encode(list(descriptions))
+
+
+def match_limitations(user_text, model, limit_keys, limit_embeddings, threshold=0.30):
+    """Semantically match user-typed text to limitation categories."""
+    if not user_text.strip():
+        return []
+    user_emb = model.encode([user_text])
+    sims = cosine_similarity(user_emb, limit_embeddings)[0]
+    return [limit_keys[i] for i, s in enumerate(sims) if s >= threshold]
+
+
 def semantic_search(query, pool_df, model, embeddings, ex_muscle_map, n=5):
     """Return top-n exercises most similar to the user's natural language query.
     Uses exercise-muscle map from workout_creator_dataset.json to find exercises
@@ -304,6 +319,14 @@ FITNESS_GOALS = [
 ]
 FITNESS_LEVELS = ["Beginner", "Intermediate", "Advanced"]
 
+# Rich descriptions used for semantic matching of user-typed limitations
+LIMITATION_DESCRIPTIONS = {
+    "Pregnant / Postpartum": "pregnant, postpartum, after giving birth, expecting a baby, maternity, recently had a baby, new mother",
+    "Bad knees": "bad knees, knee pain, knee injury, knee problems, sore knees, arthritic knees, knee surgery",
+    "Bad back": "bad back, back pain, lower back pain, back injury, spine problems, herniated disc, sciatica, lumbar pain",
+    "Shoulder injury": "shoulder injury, shoulder pain, rotator cuff, shoulder problems, sore shoulder, impingement, shoulder surgery",
+}
+
 # Safety blocklist: exercises to exclude per physical limitation
 EXERCISE_BLOCKLIST = {
     "Pregnant / Postpartum": [
@@ -331,10 +354,16 @@ EXERCISE_BLOCKLIST = {
     ],
 }
 
+limitation_keys = list(LIMITATION_DESCRIPTIONS.keys())
+limitation_embeddings = compute_limitation_embeddings(embedding_model, tuple(LIMITATION_DESCRIPTIONS.values()))
+
 
 # =============================================================================
 # APP LAYOUT
 # =============================================================================
+
+if "show_recommendations" not in st.session_state:
+    st.session_state.show_recommendations = False
 
 st.title("Your Personal Workout Planner")
 st.markdown("Get a **personalised workout plan** based on your body and goals.")
@@ -371,6 +400,60 @@ result_col.write(f"**Height:** {user_height} cm")
 
 rec_goal = recommend_goal(category)
 result_col.info(f"Based on your BMI we suggest a focus on **{rec_goal}**.")
+
+st.divider()
+
+# ---- WORKOUT PREFERENCES (filters applied before search) ----
+st.header("Workout Preferences")
+
+pref1, pref2, pref3 = st.columns(3)
+
+fitness_level = pref1.selectbox("What is your fitness level?", FITNESS_LEVELS, index=0)
+
+fitness_goal = pref2.selectbox(
+    "What is your fitness goal?",
+    FITNESS_GOALS,
+    index=FITNESS_GOALS.index(rec_goal) if rec_goal in FITNESS_GOALS else 0,
+)
+
+target_muscle = pref3.selectbox("Which muscle group do you want to target?", MUSCLE_GROUPS, index=0)
+
+# Equipment filter
+all_equipment = sorted(exercise_pool["Equipment"].dropna().unique().tolist())
+selected_equipment = st.multiselect(
+    "What equipment do you have available?",
+    options=all_equipment,
+    default=all_equipment,
+)
+
+# Physical limitations — semantic search
+limitation_text = st.text_input(
+    "Do you have any physical limitations or injuries?",
+    placeholder="e.g. I have bad knees, I'm pregnant, lower back pain, shoulder injury...",
+)
+limitations = match_limitations(limitation_text, embedding_model, limitation_keys, limitation_embeddings)
+if limitations:
+    st.info(f"Detected: {', '.join(limitations)}")
+
+# Workout duration
+workout_minutes = st.slider("How much time do you have? (minutes)", min_value=15, max_value=90, value=45, step=5)
+
+# Apply filters to exercise pool
+blocked_exercises = set()
+for limitation in limitations:
+    blocked_exercises.update(EXERCISE_BLOCKLIST.get(limitation, []))
+
+filtered_pool = exercise_pool.copy()
+if selected_equipment:
+    filtered_pool = filtered_pool[filtered_pool["Equipment"].isin(selected_equipment)]
+if blocked_exercises:
+    filtered_pool = filtered_pool[~filtered_pool["Name"].isin(blocked_exercises)]
+
+# Calculate max exercises from available time (~4 min per exercise: 3 sets × 40s + 3 × 60s rest)
+max_exercises = max(1, workout_minutes // 4)
+
+if st.button("Find Exercises", type="primary", use_container_width=True):
+    st.session_state.show_recommendations = True
 
 st.divider()
 
@@ -429,118 +512,65 @@ if search_query:
             st.write(instructions)
             st.divider()
 
-# ---- WORKOUT PREFERENCES ----
-st.header("Workout Preferences")
-
-pref1, pref2, pref3 = st.columns(3)
-
-fitness_level = pref1.selectbox("What is your fitness level?", FITNESS_LEVELS, index=0)
-
-fitness_goal = pref2.selectbox(
-    "What is your fitness goal?",
-    FITNESS_GOALS,
-    index=FITNESS_GOALS.index(rec_goal) if rec_goal in FITNESS_GOALS else 0,
-)
-
-target_muscle = pref3.selectbox("Which muscle group do you want to target?", MUSCLE_GROUPS, index=0)
-
-# Equipment filter
-all_equipment = sorted(exercise_pool["Equipment"].dropna().unique().tolist())
-selected_equipment = st.multiselect(
-    "What equipment do you have available?",
-    options=all_equipment,
-    default=all_equipment,
-)
-
-# Physical limitations
-limitations = st.multiselect(
-    "Do you have any physical limitations?",
-    options=list(EXERCISE_BLOCKLIST.keys()),
-    default=[],
-    placeholder="Select any that apply (optional)",
-)
-
-# Workout duration
-workout_minutes = st.slider("How much time do you have? (minutes)", min_value=15, max_value=90, value=45, step=5)
-
-st.divider()
-
-# Apply filters to exercise pool
-blocked_exercises = set()
-for limitation in limitations:
-    blocked_exercises.update(EXERCISE_BLOCKLIST.get(limitation, []))
-
-filtered_pool = exercise_pool.copy()
-if selected_equipment:
-    filtered_pool = filtered_pool[filtered_pool["Equipment"].isin(selected_equipment)]
-if blocked_exercises:
-    filtered_pool = filtered_pool[~filtered_pool["Name"].isin(blocked_exercises)]
-
-# Calculate max exercises from available time (~4 min per exercise: 3 sets × 40s + 3 × 60s rest)
-max_exercises = max(1, workout_minutes // 4)
-
 # ---- RECOMMENDED WORKOUT ----
-st.header("Your Recommended Workout")
+if st.session_state.show_recommendations:
+    st.header("Your Recommended Workout")
 
-top_exercises = recommend_exercises(filtered_pool, fitness_level, fitness_goal, target_muscle, muscle_relationships, n=max_exercises)
+    top_exercises = recommend_exercises(filtered_pool, fitness_level, fitness_goal, target_muscle, muscle_relationships, n=max_exercises)
 
-# Summary
-c1, c2, c3, c4 = st.columns(4)
-c1.markdown(f"**Duration**<br><span style='font-size:1.6rem;'>{workout_minutes} min</span>", unsafe_allow_html=True)
-c2.markdown(f"**Level**<br><span style='font-size:1.6rem;'>{fitness_level}</span>", unsafe_allow_html=True)
-c3.markdown(f"**Goal**<br><span style='font-size:1.6rem;'>{fitness_goal}</span>", unsafe_allow_html=True)
-c4.markdown(f"**Target**<br><span style='font-size:1.6rem;'>{target_muscle}</span>", unsafe_allow_html=True)
+    # Summary
+    c1, c2, c3, c4 = st.columns(4)
+    c1.markdown(f"**Duration**<br><span style='font-size:1.6rem;'>{workout_minutes} min</span>", unsafe_allow_html=True)
+    c2.markdown(f"**Level**<br><span style='font-size:1.6rem;'>{fitness_level}</span>", unsafe_allow_html=True)
+    c3.markdown(f"**Goal**<br><span style='font-size:1.6rem;'>{fitness_goal}</span>", unsafe_allow_html=True)
+    c4.markdown(f"**Target**<br><span style='font-size:1.6rem;'>{target_muscle}</span>", unsafe_allow_html=True)
 
-st.write("")
+    st.write("")
 
-# Build clean table for display
-display_df = top_exercises[["Name", "Sets", "Reps", "Rest", "Difficulty", "Equipment"]].copy()
-display_df.columns = ["Exercise", "Sets", "Reps", "Rest (sec)", "Difficulty", "Equipment"]
-display_df = display_df.reset_index(drop=True)
+    # Build clean table for display
+    display_df = top_exercises[["Name", "Sets", "Reps", "Rest", "Difficulty", "Equipment"]].copy()
+    display_df.columns = ["Exercise", "Sets", "Reps", "Rest (sec)", "Difficulty", "Equipment"]
+    display_df = display_df.reset_index(drop=True)
 
-st.dataframe(display_df, use_container_width=True, hide_index=True)
+    st.dataframe(display_df, use_container_width=True, hide_index=True)
 
-# Show exercise images with correct form
-st.subheader("Exercise Guide — Correct Form")
+    # Show exercise images with correct form
+    st.subheader("Exercise Guide — Correct Form")
 
-exercise_names = display_df["Exercise"].tolist()
-for ex_name in exercise_names:
-    ex_pool_row = top_exercises[top_exercises["Name"] == ex_name].iloc[0]
-    img_url = ex_pool_row["ImageURL"] if pd.notna(ex_pool_row["ImageURL"]) and ex_pool_row["ImageURL"] else None
-    ref_url = ex_pool_row["RefURL"] if pd.notna(ex_pool_row["RefURL"]) and ex_pool_row["RefURL"] else None
+    exercise_names = display_df["Exercise"].tolist()
+    for ex_name in exercise_names:
+        ex_pool_row = top_exercises[top_exercises["Name"] == ex_name].iloc[0]
+        img_url = ex_pool_row["ImageURL"] if pd.notna(ex_pool_row["ImageURL"]) and ex_pool_row["ImageURL"] else None
+        ref_url = ex_pool_row["RefURL"] if pd.notna(ex_pool_row["RefURL"]) and ex_pool_row["RefURL"] else None
 
-    if img_url:
-        col_img, col_info = st.columns([1, 1])
-        col_img.image(img_url, use_container_width=True)
-        # Get exercise details from the display table
-        ex_row = display_df[display_df["Exercise"] == ex_name].iloc[0]
-        col_info.markdown(f"### {ex_name}")
-        col_info.write(f"**Sets:** {ex_row['Sets']}  |  **Reps:** {ex_row['Reps']}  |  **Rest:** {ex_row['Rest (sec)']}s")
-        col_info.write(f"**Difficulty:** {ex_row['Difficulty']}  |  **Equipment:** {ex_row['Equipment']}")
-        if ref_url:
-            col_info.markdown(f"[View full exercise guide]({ref_url})")
+        if img_url:
+            col_img, col_info = st.columns([1, 1])
+            col_img.image(img_url, use_container_width=True)
+            ex_row = display_df[display_df["Exercise"] == ex_name].iloc[0]
+            col_info.markdown(f"### {ex_name}")
+            col_info.write(f"**Sets:** {ex_row['Sets']}  |  **Reps:** {ex_row['Reps']}  |  **Rest:** {ex_row['Rest (sec)']}s")
+            col_info.write(f"**Difficulty:** {ex_row['Difficulty']}  |  **Equipment:** {ex_row['Equipment']}")
+            if ref_url:
+                col_info.markdown(f"[View full exercise guide]({ref_url})")
 
-        # Display instructions
-        instructions = exercise_instructions.get(ex_name, "Instructions not available for this exercise.")
-        st.markdown("**How to Perform:**")
-        st.write(instructions)
-        st.divider()
-    else:
-        st.markdown(f"### {ex_name}")
-        ex_row = display_df[display_df["Exercise"] == ex_name].iloc[0]
-        st.write(f"**Sets:** {ex_row['Sets']}  |  **Reps:** {ex_row['Reps']}  |  **Rest:** {ex_row['Rest (sec)']}s")
-        st.write(f"**Difficulty:** {ex_row['Difficulty']}  |  **Equipment:** {ex_row['Equipment']}")
-        st.caption("Image not yet available for this exercise.")
+            instructions = exercise_instructions.get(ex_name, "Instructions not available for this exercise.")
+            st.markdown("**How to Perform:**")
+            st.write(instructions)
+            st.divider()
+        else:
+            st.markdown(f"### {ex_name}")
+            ex_row = display_df[display_df["Exercise"] == ex_name].iloc[0]
+            st.write(f"**Sets:** {ex_row['Sets']}  |  **Reps:** {ex_row['Reps']}  |  **Rest:** {ex_row['Rest (sec)']}s")
+            st.write(f"**Difficulty:** {ex_row['Difficulty']}  |  **Equipment:** {ex_row['Equipment']}")
+            st.caption("Image not yet available for this exercise.")
 
-        # Display instructions
-        instructions = exercise_instructions.get(ex_name, "Instructions not available for this exercise.")
-        st.markdown("**How to Perform:**")
-        st.write(instructions)
-        st.divider()
+            instructions = exercise_instructions.get(ex_name, "Instructions not available for this exercise.")
+            st.markdown("**How to Perform:**")
+            st.write(instructions)
+            st.divider()
 
-# Show which dataset plans were used
-st.caption(
-    "Exercises sourced from: "
-    + ", ".join(sorted(top_exercises["Source"].unique()))
-)
+    st.caption(
+        "Exercises sourced from: "
+        + ", ".join(sorted(top_exercises["Source"].unique()))
+    )
 
