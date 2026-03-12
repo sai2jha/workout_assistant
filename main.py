@@ -120,9 +120,9 @@ def compute_limitation_embeddings(_model, descriptions):
     return _model.encode(list(descriptions))
 
 
-def match_limitations(user_text, model, limit_keys, limit_embeddings, threshold=0.30):
+def match_limitations(user_text, model, limit_keys, limit_embeddings, threshold=0.40):
     """Semantically match user-typed text to limitation categories."""
-    if not user_text.strip():
+    if not user_text.strip() or len(user_text.strip()) < 4:
         return []
     user_emb = model.encode([user_text])
     sims = cosine_similarity(user_emb, limit_embeddings)[0]
@@ -258,6 +258,41 @@ def recommend_exercises(pool_df, user_level, user_goal, user_muscle, related_map
     return result
 
 
+def recommend_exercises_multi(pool_df, user_level, user_goal, target_muscles, related_map, n=5, exclude_names=None):
+    """Distribute n exercises evenly across multiple target muscles."""
+    if not target_muscles:
+        return pd.DataFrame()
+
+    base_per_muscle = n // len(target_muscles)
+    remainder = n % len(target_muscles)
+
+    all_results = []
+    used_names = set(exclude_names or [])
+
+    for i, muscle in enumerate(target_muscles):
+        muscle_n = base_per_muscle + (1 if i < remainder else 0)
+        if muscle_n == 0:
+            continue
+
+        recs = recommend_exercises(pool_df, user_level, user_goal, muscle, related_map, n=muscle_n + 5)
+        # Deduplicate across muscles
+        recs = recs[~recs["Name"].isin(used_names)]
+        recs = recs.head(muscle_n)
+
+        # If not enough unique exercises, allow repeats from other muscles
+        if len(recs) < muscle_n:
+            fallback = recommend_exercises(pool_df, user_level, user_goal, muscle, related_map, n=muscle_n + 5)
+            fallback = fallback[~fallback["Name"].isin(recs["Name"])]
+            recs = pd.concat([recs, fallback.head(muscle_n - len(recs))])
+
+        used_names.update(recs["Name"].tolist())
+        all_results.append(recs)
+
+    if all_results:
+        return pd.concat(all_results).reset_index(drop=True)
+    return pd.DataFrame()
+
+
 def get_duration(level):
     return {"Beginner": 30, "Intermediate": 45, "Advanced": 60}.get(level, 30)
 
@@ -354,6 +389,51 @@ EXERCISE_BLOCKLIST = {
     ],
 }
 
+WORKOUT_SPLITS = {
+    1: {"name": "Full Body", "days": [
+        {"label": "Day 1 — Full Body", "muscles": ["Chest", "Back", "Legs", "Shoulders", "Abs"]},
+    ]},
+    2: {"name": "Full Body", "days": [
+        {"label": "Day 1 — Full Body A", "muscles": ["Chest", "Back", "Legs", "Abs"]},
+        {"label": "Day 2 — Full Body B", "muscles": ["Shoulders", "Biceps", "Triceps", "Legs"]},
+    ]},
+    3: {"name": "Push / Pull / Legs", "days": [
+        {"label": "Day 1 — Push", "muscles": ["Chest", "Shoulders", "Triceps"]},
+        {"label": "Day 2 — Pull", "muscles": ["Back", "Biceps"]},
+        {"label": "Day 3 — Legs & Core", "muscles": ["Legs", "Abs"]},
+    ]},
+    4: {"name": "Upper / Lower", "days": [
+        {"label": "Day 1 — Upper A", "muscles": ["Chest", "Shoulders", "Triceps"]},
+        {"label": "Day 2 — Lower A", "muscles": ["Legs", "Abs"]},
+        {"label": "Day 3 — Upper B", "muscles": ["Back", "Biceps", "Shoulders"]},
+        {"label": "Day 4 — Lower B", "muscles": ["Legs", "Abs"]},
+    ]},
+    5: {"name": "Body Part Focus", "days": [
+        {"label": "Day 1 — Chest & Triceps", "muscles": ["Chest", "Triceps"]},
+        {"label": "Day 2 — Back & Biceps", "muscles": ["Back", "Biceps"]},
+        {"label": "Day 3 — Legs", "muscles": ["Legs"]},
+        {"label": "Day 4 — Shoulders & Abs", "muscles": ["Shoulders", "Abs"]},
+        {"label": "Day 5 — Full Body", "muscles": ["Chest", "Back", "Legs"]},
+    ]},
+    6: {"name": "Body Part Split", "days": [
+        {"label": "Day 1 — Chest", "muscles": ["Chest"]},
+        {"label": "Day 2 — Back", "muscles": ["Back"]},
+        {"label": "Day 3 — Legs", "muscles": ["Legs"]},
+        {"label": "Day 4 — Shoulders", "muscles": ["Shoulders"]},
+        {"label": "Day 5 — Arms", "muscles": ["Biceps", "Triceps"]},
+        {"label": "Day 6 — Core & Conditioning", "muscles": ["Abs", "Legs"]},
+    ]},
+    7: {"name": "Every Day Split", "days": [
+        {"label": "Day 1 — Chest", "muscles": ["Chest"]},
+        {"label": "Day 2 — Back", "muscles": ["Back"]},
+        {"label": "Day 3 — Legs", "muscles": ["Legs"]},
+        {"label": "Day 4 — Shoulders", "muscles": ["Shoulders"]},
+        {"label": "Day 5 — Arms", "muscles": ["Biceps", "Triceps"]},
+        {"label": "Day 6 — Core", "muscles": ["Abs"]},
+        {"label": "Day 7 — Active Recovery", "muscles": ["Abs", "Legs"]},
+    ]},
+}
+
 limitation_keys = list(LIMITATION_DESCRIPTIONS.keys())
 limitation_embeddings = compute_limitation_embeddings(embedding_model, tuple(LIMITATION_DESCRIPTIONS.values()))
 
@@ -364,6 +444,8 @@ limitation_embeddings = compute_limitation_embeddings(embedding_model, tuple(LIM
 
 if "show_recommendations" not in st.session_state:
     st.session_state.show_recommendations = False
+if "show_weekly_plan" not in st.session_state:
+    st.session_state.show_weekly_plan = False
 
 st.title("Your Personal Workout Planner")
 st.markdown("Get a **personalised workout plan** based on your body and goals.")
@@ -416,7 +498,14 @@ fitness_goal = pref2.selectbox(
     index=FITNESS_GOALS.index(rec_goal) if rec_goal in FITNESS_GOALS else 0,
 )
 
-target_muscle = pref3.selectbox("Which muscle group do you want to target?", MUSCLE_GROUPS, index=0)
+target_muscles = pref3.multiselect(
+    "Which muscle group(s) do you want to target?",
+    options=MUSCLE_GROUPS,
+    default=["Biceps"],
+)
+if not target_muscles:
+    st.warning("Please select at least one muscle group.")
+    st.stop()
 
 # Equipment filter
 all_equipment = sorted(exercise_pool["Equipment"].dropna().unique().tolist())
@@ -448,6 +537,9 @@ if selected_equipment:
     filtered_pool = filtered_pool[filtered_pool["Equipment"].isin(selected_equipment)]
 if blocked_exercises:
     filtered_pool = filtered_pool[~filtered_pool["Name"].isin(blocked_exercises)]
+
+if filtered_pool.empty:
+    st.warning("No exercises found with the selected equipment. Try adding more equipment options.")
 
 # Calculate max exercises from available time (~4 min per exercise: 3 sets × 40s + 3 × 60s rest)
 max_exercises = max(1, workout_minutes // 4)
@@ -516,14 +608,26 @@ if search_query:
 if st.session_state.show_recommendations:
     st.header("Your Recommended Workout")
 
-    top_exercises = recommend_exercises(filtered_pool, fitness_level, fitness_goal, target_muscle, muscle_relationships, n=max_exercises)
+    if filtered_pool.empty:
+        st.warning("No exercises to recommend — please select at least one equipment option above.")
+        st.stop()
+
+    top_exercises = recommend_exercises_multi(filtered_pool, fitness_level, fitness_goal, target_muscles, muscle_relationships, n=max_exercises)
+
+    if top_exercises.empty:
+        st.warning("No exercises found for this combination. Try a different muscle group or add more equipment.")
+        st.stop()
 
     # Summary
+    target_display = ", ".join(target_muscles[:3])
+    if len(target_muscles) > 3:
+        target_display += f" +{len(target_muscles) - 3}"
+
     c1, c2, c3, c4 = st.columns(4)
     c1.markdown(f"**Duration**<br><span style='font-size:1.6rem;'>{workout_minutes} min</span>", unsafe_allow_html=True)
     c2.markdown(f"**Level**<br><span style='font-size:1.6rem;'>{fitness_level}</span>", unsafe_allow_html=True)
     c3.markdown(f"**Goal**<br><span style='font-size:1.6rem;'>{fitness_goal}</span>", unsafe_allow_html=True)
-    c4.markdown(f"**Target**<br><span style='font-size:1.6rem;'>{target_muscle}</span>", unsafe_allow_html=True)
+    c4.markdown(f"**Target**<br><span style='font-size:1.6rem;'>{target_display}</span>", unsafe_allow_html=True)
 
     st.write("")
 
@@ -573,4 +677,68 @@ if st.session_state.show_recommendations:
         "Exercises sourced from: "
         + ", ".join(sorted(top_exercises["Source"].unique()))
     )
+
+# ---- WEEKLY WORKOUT PLAN ----
+st.divider()
+st.header("Weekly Workout Plan")
+st.markdown("Generate a structured weekly plan that targets different muscle groups each day.")
+
+num_days = st.slider("How many days per week do you want to work out?", min_value=1, max_value=7, value=3)
+
+split_info = WORKOUT_SPLITS[num_days]
+st.info(f"Recommended split: **{split_info['name']}** ({num_days} day{'s' if num_days > 1 else ''})")
+
+if st.button("Generate Weekly Plan", type="primary", use_container_width=True):
+    st.session_state.show_weekly_plan = True
+
+if st.session_state.show_weekly_plan:
+    if filtered_pool.empty:
+        st.warning("No exercises to plan — please select at least one equipment option above.")
+    else:
+        plan_split = WORKOUT_SPLITS[num_days]
+        exercises_per_day = max(1, workout_minutes // 4)
+        global_used = set()
+
+        for day in plan_split["days"]:
+            day_exercises = recommend_exercises_multi(
+                filtered_pool, fitness_level, fitness_goal,
+                day["muscles"], muscle_relationships, n=exercises_per_day,
+                exclude_names=global_used,
+            )
+            global_used.update(day_exercises["Name"].tolist() if not day_exercises.empty else [])
+
+            with st.expander(f"{day['label']}  —  {', '.join(day['muscles'])}", expanded=False):
+                if day_exercises.empty:
+                    st.warning("No exercises available for this day with current filters.")
+                    continue
+
+                col1, col2, col3 = st.columns(3)
+                col1.metric("Exercises", len(day_exercises))
+                col2.metric("Est. Duration", f"{len(day_exercises) * 4} min")
+                col3.metric("Muscles", ", ".join(day["muscles"]))
+
+                day_display = day_exercises[["Name", "Sets", "Reps", "Rest", "Difficulty", "Equipment", "Muscle"]].copy()
+                day_display.columns = ["Exercise", "Sets", "Reps", "Rest (sec)", "Difficulty", "Equipment", "Muscle"]
+                day_display = day_display.reset_index(drop=True)
+                st.dataframe(day_display, use_container_width=True, hide_index=True)
+
+                for _, row in day_exercises.iterrows():
+                    img_url = row["ImageURL"] if pd.notna(row["ImageURL"]) and row["ImageURL"] else None
+                    ref_url = row["RefURL"] if pd.notna(row["RefURL"]) and row["RefURL"] else None
+
+                    col_img, col_info = st.columns([1, 1])
+                    if img_url:
+                        col_img.image(img_url, use_container_width=True)
+                    else:
+                        col_img.caption("Image not yet available.")
+
+                    col_info.markdown(f"**{row['Name']}**")
+                    col_info.write(f"Sets: {row['Sets']}  |  Reps: {row['Reps']}  |  Rest: {row['Rest']}s")
+                    col_info.write(f"Difficulty: {row['Difficulty']}  |  Equipment: {row['Equipment']}")
+                    if ref_url:
+                        col_info.markdown(f"[View full guide]({ref_url})")
+
+                    instructions = exercise_instructions.get(row["Name"], "Instructions not available.")
+                    st.markdown(f"**How to Perform:** {instructions}")
+                    st.divider()
 
