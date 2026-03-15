@@ -189,6 +189,16 @@ def semantic_search(query, pool_df, model, embeddings, ex_muscle_map, n=5):
 # RECOMMENDATION ENGINE — scores every dataset exercise for the user
 # =============================================================================
 
+LEVEL_SETS = {"Beginner": 2, "Intermediate": 3, "Advanced": 4}
+
+# Which exercise levels are shown per user level
+LEVEL_POOL = {
+    "Beginner": {"Beginner", "Intermediate"},
+    "Intermediate": {"Intermediate", "Advanced"},
+    "Advanced": {"Intermediate", "Advanced"},
+}
+
+
 def recommend_exercises(pool_df, user_level, user_goal, user_muscle, related_map, n=5):
     """
     Score each exercise in the dataset pool and return the top-n.
@@ -201,14 +211,23 @@ def recommend_exercises(pool_df, user_level, user_goal, user_muscle, related_map
       +1  goal is in same family (strength/muscle gain  or  endurance/weight loss)
       +4  exact muscle group match
       +1  baseline for every exercise (so there's always a result)
+
+    Level filtering:
+      Beginner    → Beginner + Intermediate exercises
+      Intermediate → Intermediate + Advanced exercises
+      Advanced    → Intermediate + Advanced exercises
+    Sets are overridden: Beginner=2, Intermediate=3, Advanced=4
     """
-    level_order = {"Beginner": 0, "Intermediate": 1, "Advanced": 2}
+    allowed_levels = LEVEL_POOL.get(user_level, {"Beginner", "Intermediate", "Advanced"})
+    pool_df = pool_df[pool_df["Level"].isin(allowed_levels)].copy()
+
     goal_families = {
         "Strength": "build", "Muscle gain": "build", "Power": "build",
         "Endurance": "burn", "Weight loss": "burn", "Conditioning": "burn",
         "Flexibility": "recover", "Rehabilitation": "recover",
     }
 
+    level_order = {"Beginner": 0, "Intermediate": 1, "Advanced": 2}
     scores = []
     user_lvl_idx = level_order.get(user_level, 0)
     user_family = goal_families.get(user_goal, "")
@@ -236,7 +255,6 @@ def recommend_exercises(pool_df, user_level, user_goal, user_muscle, related_map
 
         scores.append(score)
 
-    pool_df = pool_df.copy()
     pool_df["_score"] = scores
 
     # First: exact muscle matches
@@ -244,17 +262,19 @@ def recommend_exercises(pool_df, user_level, user_goal, user_muscle, related_map
     exact = exact.sort_values("_score", ascending=False).drop_duplicates(subset="Name", keep="first")
 
     if len(exact) >= n:
-        return exact.head(n)
+        result = exact.head(n)
+    else:
+        # Fill remaining spots with related muscle groups (from dataset)
+        remaining = n - len(exact)
+        related = related_map.get(user_muscle, [])
+        related_df = pool_df[pool_df["Muscle"].isin(related)]
+        related_df = related_df.sort_values("_score", ascending=False).drop_duplicates(subset="Name", keep="first")
+        related_df = related_df[~related_df["Name"].isin(exact["Name"])]
+        result = pd.concat([exact, related_df.head(remaining)])
 
-    # Fill remaining spots with related muscle groups (from dataset)
-    remaining = n - len(exact)
-    related = related_map.get(user_muscle, [])
-    related_df = pool_df[pool_df["Muscle"].isin(related)]
-    related_df = related_df.sort_values("_score", ascending=False).drop_duplicates(subset="Name", keep="first")
-    # Exclude exercises already in exact matches
-    related_df = related_df[~related_df["Name"].isin(exact["Name"])]
-
-    result = pd.concat([exact, related_df.head(remaining)])
+    # Override sets based on user level
+    result = result.copy()
+    result["Sets"] = LEVEL_SETS[user_level]
     return result
 
 
